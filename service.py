@@ -24,6 +24,7 @@ try:
 except ImportError:
     if len(sys.argv) > 1 and sys.argv[1] == 'test':
         import unittest  # NOQA
+
         try:
             import mock  # NOQA
         except ImportError:
@@ -39,19 +40,18 @@ else:
     import xbmcvfs
 
 __addon__ = xbmcaddon.Addon()
-__author__     = __addon__.getAddonInfo('author')
-__scriptid__   = __addon__.getAddonInfo('id')
+__author__ = __addon__.getAddonInfo('author')
+__scriptid__ = __addon__.getAddonInfo('id')
 __scriptname__ = __addon__.getAddonInfo('name')
-__version__    = __addon__.getAddonInfo('version')
-__language__   = __addon__.getLocalizedString
+__version__ = __addon__.getAddonInfo('version')
+__language__ = __addon__.getLocalizedString
 
-__cwd__        = xbmc.translatePath(__addon__.getAddonInfo('path').decode("utf-8"))
-__profile__    = xbmc.translatePath(__addon__.getAddonInfo('profile').decode("utf-8"))
-
+__cwd__ = xbmc.translatePath(__addon__.getAddonInfo('path').decode("utf-8"))
+__profile__ = xbmc.translatePath(__addon__.getAddonInfo('profile').decode("utf-8"))
 
 MAIN_SUBWIKI_URL = "http://www.subswiki.com/"
 SEARCH_PAGE_URL = MAIN_SUBWIKI_URL + \
-    "search.php?search=%(query)s"
+                  "search.php?search=%(query)s"
 
 INTERNAL_LINK_URL_BASE = "plugin://%s/?"
 SUB_EXTS = ['srt', 'sub', 'txt']
@@ -59,24 +59,28 @@ HTTP_USER_AGENT = "User-Agent=Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv
 
 PAGE_ENCODING = 'utf-8'
 
-
 # ============================
 # Regular expression patterns
 # ============================
 
 SUBTITLE_INITIAL_SEARCH = re.compile(r'''<a\s+href="/(?P<url_id>film.+?|serie.+?)"\s*>(?P<text>.+?)</a>''',
-                         re.IGNORECASE | re.DOTALL | re.VERBOSE | re.UNICODE |
-                         re.MULTILINE)
+                                     re.IGNORECASE | re.DOTALL | re.VERBOSE | re.UNICODE |
+                                     re.MULTILINE)
 
-SUBTITLE_SECOND_SEARCH=re.compile(r'''<table\s+width="90%"\s+border="0"\s+align="center">[\s\r\n]*<tr>[\s\r\n]*<td\s+colspan="2"\s+class="NewsTitle"\s+style="font-size:13px;"\s+height="25">[\s\r\n]*<img\s+src="/images/folder_page.png"\s+width="16"\s+height="16"\s*/>(?P<version>[\s\S]*?)</td>(?P<content>.*?)</table>''', re.IGNORECASE |
-                              re.DOTALL | re.MULTILINE | re.UNICODE)
+SUBTITLE_SECOND_SEARCH = re.compile(
+    r'''<table\s+style=\"width: 90%; border: 0; text-align: left;\">[\s\r\n]*<tr>[\s\r\n]*<td\s+colspan=\"2\"\s+class=\"NewsTitle\"\s+style=\"font-size:13px; height: 25px;\"\s*>[\s\r\n]*<img\s+src=\"/images/folder_page\.png\"\s+alt=\"\"\s+style=\"width: 16px; height: 16px;\"\s*/>(?P<version>[\s\S]*?)</td>(?P<content>[\s\S]*?)[\s\r\n]*</table>''',
+    re.IGNORECASE |
+    re.DOTALL | re.MULTILINE | re.UNICODE)
 
+SUBTITULE_FINAL_SEARCH = re.compile(
+    r'''<td\s+style=\"width: 21%;\"\s+class=\"language\">(?P<language>[\s\S]*?)</td>[\s\r\n]*<td\s+style=\"width: 19%;\">[\s\r\n]*<strong>[\w\s.]*<\/strong>[\s\r\n]*<\/td>[\s\r\n]*<td\s+colspan=\"3\">[\s\r\n]*<img\s+src=\"/images/download\.png\"\s+alt=\"\"\s+style=\"width: 16px; height: 16px;\"\s*/>(?P<content>[\s\S]*?)</td>''',
+    re.IGNORECASE |
+    re.DOTALL | re.MULTILINE | re.UNICODE)
 
-SUBTITULE_FINAL_SEARCH=re.compile(r'''<td\s+width="21%"\s+class="language">(?P<language>[\s\S]*?)</td>[\s\r\n]*<td\s+width="19%">[\s\r\n]*<strong>[\w\s.]*<\/strong>[\s\r\n]*<\/td>[\s\r\n]*<td\s+colspan="3">[\s\r\n]*<img\s+src="/images/download.png"\s+width="16"\s+height="16"\s*/>(?P<content>.*?)</td>''', re.IGNORECASE |
-                              re.DOTALL | re.MULTILINE | re.UNICODE)
+SUBTITULE_LAST_SEARCH = re.compile(r'''<a href=\"(?P<download>.*?)\"(.*?)>(?P<download_descr>.*?)</a>''',
+                                   re.IGNORECASE |
+                                   re.DOTALL | re.MULTILINE | re.UNICODE)
 
-SUBTITULE_LAST_SEARCH=re.compile(r'''<a href="(?P<download>.*?)"(.*?)>(?P<download_descr>.*?)</a>''', re.IGNORECASE |
-                              re.DOTALL | re.MULTILINE | re.UNICODE)
 
 # ==========
 # Functions
@@ -97,37 +101,41 @@ def log(msg, level=LOGDEBUG):
 
 def get_url(url):
     class MyOpener(FancyURLopener):
-        #version = HTTP_USER_AGENT
+        # version = HTTP_USER_AGENT
         version = ''
+
     my_urlopener = MyOpener()
     log(u"Fetching %s" % url)
     try:
-        response = my_urlopener.open(url)        
-        content = response.read()                
+        response = my_urlopener.open(url)
+        content = response.read()
     except Exception:
         log(u"Failed to fetch %s" % url, level=LOGWARNING)
         ucontent = None
-            
+
     ucontent = unicode(content, 'utf-8')
     h = HTMLParser.HTMLParser()
     ucontent = h.unescape(ucontent)
-            
+
     return ucontent
+
 
 def download_url(url):
     class MyOpener(FancyURLopener):
-        #version = HTTP_USER_AGENT
+        # version = HTTP_USER_AGENT
         version = ''
+
     my_urlopener = MyOpener()
     log(u"Fetching %s" % url)
     try:
-        response = my_urlopener.open(url)        
-        content = response.read()                
+        response = my_urlopener.open(url)
+        content = response.read()
     except Exception:
         log(u"Failed to fetch %s" % url, level=LOGWARNING)
         content = None
-            
+
     return content
+
 
 def _downloads2rating(downloads):
     rating = downloads / 1000
@@ -138,94 +146,95 @@ def _downloads2rating(downloads):
 
 def get_all_subs(searchstring, languages, file_orig_path, istvshow):
     subs_list = []
-    bool = True    
+    bool = True
     while bool:
         bool = False
         log(u"Trying string= %s" % searchstring)
         url = SEARCH_PAGE_URL % {'query': quote_plus(searchstring)}
         content = get_url(url)
-        if content is None or not SUBTITLE_INITIAL_SEARCH.search(content):            
+        if content is None or not SUBTITLE_INITIAL_SEARCH.search(content):
             break
         for match in SUBTITLE_INITIAL_SEARCH.finditer(content):
             groups = match.groupdict()
             url_id = groups['url_id']
-            log(u'%s'%(url_id))
+            log(u'%s' % (url_id))
             if istvshow and 'film' in url_id:
                 continue
             if not istvshow and 'serie' in url_id:
                 continue
-            descr = groups['text']            
+            descr = groups['text']
             descr = descr.strip()
             # Remove new lines
-            descr = re.sub('\n', '', descr)                            
+            descr = re.sub('\n', '', descr)
             # Remove HTML tags
             descr = re.sub(r'<[^<]+?>', '', descr)
-            url_search= MAIN_SUBWIKI_URL + url_id            
-            content2=get_url(url_search)
+            url_search = MAIN_SUBWIKI_URL + url_id
+            content2 = get_url(url_search)
             content2 = re.sub('\n', '', content2)
             content2 = re.sub('\r', '', content2)
+            content2 = re.sub(r'''<script>.*</script>''', '', content2, flags=re.IGNORECASE | re.DOTALL
+                                                                              | re.MULTILINE | re.UNICODE)
             try:
                 log(u'Subtitles found: [url_id = %s] "%s"' % (url_id,
-                                                                    descr))
+                                                              descr))
             except Exception:
-                pass            
-            if content2 is None or not SUBTITLE_SECOND_SEARCH.search(content2):                
+                pass
+            if content2 is None or not SUBTITLE_SECOND_SEARCH.search(content2):
                 break
             for match2 in SUBTITLE_SECOND_SEARCH.finditer(content2):
-                groups2 = match2.groupdict()               
-                descr2 = descr+" "+groups2['version']               
-                
+                groups2 = match2.groupdict()
+                descr2 = descr + " " + groups2['version']
+
                 descr2 = descr2.strip()
                 # Remove new lines
-                descr2 = re.sub('\n', ' ', descr2)                            
+                descr2 = re.sub('\n', ' ', descr2)
                 # Remove HTML tags
-                descr2 = re.sub(r'<[^<]+?>', '', descr2)                
+                descr2 = re.sub(r'<[^<]+?>', '', descr2)
                 content3 = groups2['content']
-                                               
-                if content3 is None or not SUBTITULE_FINAL_SEARCH.search(content3):                    
+                if content3 is None or not SUBTITULE_FINAL_SEARCH.search(content3):
                     break
-                                                
+
                 for match3 in SUBTITULE_FINAL_SEARCH.finditer(content3):
                     groups3 = match3.groupdict()
-                    
-                    language= groups3['language']
-                                                                            
-                    if  languages in language:
-                        content4=groups3['content']                        
-                        if content4 is None or not SUBTITULE_LAST_SEARCH.search(content4):                    
+
+                    language = groups3['language']
+
+                    if languages in language:
+                        content4 = groups3['content']
+                        if content4 is None or not SUBTITULE_LAST_SEARCH.search(content4):
                             break
                         for match4 in SUBTITULE_LAST_SEARCH.finditer(content4):
                             groups4 = match4.groupdict()
-                            
-                            download_id= groups4['download']
-                            download_descr= groups4['download_descr']
-                            
-                            descr3=descr2+" "+download_descr
+
+                            download_id = groups4['download']
+                            download_descr = groups4['download_descr']
+
+                            descr3 = descr2 + " " + download_descr
                             # If our actual video file's name appears in the description
                             # then set sync to True because it has better chances of its
                             # synchronization to match
                             _, fn = os.path.split(file_orig_path)
                             name, _ = os.path.splitext(fn)
                             sync = re.search(re.escape(name), descr3, re.I) is not None
-        
+
                             try:
                                 log(u'Subtitles found: (download_id = %s) "%s"' % (download_id,
                                                                                    language))
                             except Exception:
                                 pass
                             item = {
-                                    'descr': descr3,
-                                    'sync': sync,
-                                    'download_id': download_id.decode(PAGE_ENCODING),
-                                    'language':language,                        
-                                    'downloads': 0,
-                                    'rating': 0,
-                                    'score': 0,
+                                'descr': descr3,
+                                'sync': sync,
+                                'download_id': download_id.decode(PAGE_ENCODING),
+                                'language': language,
+                                'downloads': 0,
+                                'rating': 0,
+                                'score': 0,
                             }
                             subs_list.append(item)
                     else:
                         log(u'Subtitles found no match to languages: "%s - %s"' % (language, languages))
-                        
+
     # Put subs with sync=True at the top
     subs_list = sorted(subs_list, key=lambda s: s['sync'], reverse=True)
     log(u"Returning %s" % pformat(subs_list))
@@ -294,7 +303,7 @@ def Search(item):
         searchstring = "%s - %#02dx%#02d" % (tvshow, int(season), int(episode))
     else:
         searchstring = title
-    log(u"Search string = %s" % searchstring)    
+    log(u"Search string = %s" % searchstring)
     subs_list = get_all_subs(searchstring, u'Español', file_original_path, istvshow)
 
     for sub in subs_list:
@@ -340,8 +349,8 @@ def _handle_compressed_subs(workdir, compressed_file):
     # Wait 2 seconds so that the unpacked files are at least 1 second newer
     time.sleep(2)
     xbmc.executebuiltin("XBMC.Extract(%s, %s)" % (
-                        compressed_file.encode("utf-8"),
-                        workdir.encode("utf-8")))
+        compressed_file.encode("utf-8"),
+        workdir.encode("utf-8")))
 
     retval = False
     if _wait_for_extract(workdir, filecount, base_mtime, MAX_UNZIP_WAIT):
@@ -395,12 +404,14 @@ def _save_subtitles(workdir, content):
             return tmp_fname
     return None
 
+
 def rmgeneric(path, __func__):
     try:
         __func__(path)
         log(u"Removed %s" % normalize_string(path))
     except OSError, (errno, strerror):
-        log(u"Error removing %(path)s, %(error)s" % {'path' : normalize_string(path), 'error': strerror }, level=LOGFATAL)
+        log(u"Error removing %(path)s, %(error)s" % {'path': normalize_string(path), 'error': strerror}, level=LOGFATAL)
+
 
 def removeAll(dir):
     if not os.path.isdir(dir):
@@ -410,10 +421,11 @@ def removeAll(dir):
         if os.path.isdir(pjoin(dir, file)):
             removeAll(file)
         else:
-            f=os.remove
+            f = os.remove
             rmgeneric(pjoin(dir, file), f)
-    f=os.rmdir
+    f = os.rmdir
     rmgeneric(dir, f)
+
 
 def ensure_workdir(workdir):
     # Cleanup temp dir, we recommend you download/unzip your subs in temp
@@ -432,7 +444,7 @@ def Download(download_id, workdir):
     download_content = download_url(subtitle_detail_url)
     if download_content is None:
         log(u"Expected content not found in selected subtitle detail page",
-                level=LOGFATAL)
+            level=LOGFATAL)
         return subtitles_list
     else:
         saved_fname = _save_subtitles(workdir, download_content)
@@ -440,12 +452,11 @@ def Download(download_id, workdir):
             subtitles_list.append(saved_fname)
         else:
             log(u"Expected content not found in selected subtitle detail page",
-            level=LOGFATAL)
+                level=LOGFATAL)
     return subtitles_list
 
 
 def _double_dot_fix_hack(video_filename):
-
     log(u"video_filename = %s" % video_filename)
 
     work_path = video_filename
@@ -469,9 +480,11 @@ def _double_dot_fix_hack(video_filename):
             log(u"renaming %s to %s" % (bad, old))
             xbmcvfs.rename(bad, old)
 
+
 def normalize_string(str):
     return normalize('NFKD', unicode(unicode(str, 'utf-8'))).encode('ascii',
                                                                     'ignore')
+
 
 def get_params(argv):
     params = {}
@@ -558,10 +571,10 @@ def main():
     # Send end of directory to XBMC
     xbmcplugin.endOfDirectory(int(sys.argv[1]))
 
-    
+
 if __name__ == '__main__':
-      main()
-    
+    main()
+
 # if __name__ == '__main__':    
 #      item = {
 #              'temp': False,
